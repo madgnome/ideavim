@@ -429,6 +429,11 @@ public class RegisterActions {
     parser.registerAction(KeyParser.MAPPING_NORMAL, "VimFileGetFileInfo", Command.OTHER_READONLY,
                           new Shortcut(KeyStroke.getKeyStroke(KeyEvent.VK_G, KeyEvent.CTRL_MASK)));
 
+    parser.registerAction(KeyParser.MAPPING_NORMAL, "NextTab", Command.OTHER_READONLY,
+                          new Shortcut("gt"));
+    parser.registerAction(KeyParser.MAPPING_NORMAL, "PreviousTab", Command.OTHER_READONLY,
+                          new Shortcut("gT"));
+
     // Window Actions
     // TODO - CTRL-W commands: +, -, =, S, s, _, b, c, n, o, q, s, t, <up>, <down>
 
