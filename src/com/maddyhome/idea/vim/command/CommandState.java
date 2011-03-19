@@ -61,8 +61,6 @@ public class CommandState {
   public static final int MODE_EX_ENTRY = 6;
 
   public static final int SUBMODE_SINGLE_COMMAND = 1;
-  public static final int SUBMODE_INSERT = 1;
-  public static final int SUBMODE_REPLACE = 1;
 
   /**
    * Gets the command state singleton
@@ -85,7 +83,8 @@ public class CommandState {
   }
 
   public static boolean inInsertMode(Editor editor) {
-    return (getInstance(editor).getMode() == MODE_INSERT || getInstance(editor).getMode() == MODE_REPLACE);
+    final int mode = getInstance(editor).getMode();
+    return mode == MODE_INSERT || mode == MODE_REPLACE;
   }
 
   /**
@@ -139,11 +138,11 @@ public class CommandState {
    * @return The current runtime mode
    */
   public int getMode() {
+    final int mode = currentState().getMode();
     if (logger.isDebugEnabled()) {
-      logger.debug("getMode=" + currentState().getMode());
+      logger.debug("getMode=" + mode);
     }
-    //return mode;
-    return currentState().getMode();
+    return mode;
   }
 
   public int getSubMode() {
@@ -246,11 +245,6 @@ public class CommandState {
    */
   public void reset() {
     command = null;
-    /*
-    mode = MODE_COMMAND;
-    visualType = 0;
-    mappingMode = KeyParser.MAPPING_NORMAL;
-    */
     modes.clear();
     updateStatus();
   }
@@ -261,7 +255,6 @@ public class CommandState {
    * @return The current key mapping mode
    */
   public int getMappingMode() {
-    //return mappingMode;
     if (logger.isDebugEnabled()) {
       logger.debug("getMappingMode=" + currentState().getMapping());
     }

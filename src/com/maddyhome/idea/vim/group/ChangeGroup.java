@@ -30,7 +30,7 @@ import com.intellij.openapi.editor.event.EditorFactoryAdapter;
 import com.intellij.openapi.editor.event.EditorFactoryEvent;
 import com.intellij.openapi.editor.event.EditorMouseAdapter;
 import com.intellij.openapi.editor.event.EditorMouseEvent;
-import com.intellij.openapi.fileEditor.*;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.FileTypeManager;
 import com.intellij.openapi.project.Project;
@@ -48,7 +48,6 @@ import com.maddyhome.idea.vim.helper.*;
 import com.maddyhome.idea.vim.key.KeyParser;
 import com.maddyhome.idea.vim.option.BoundListOption;
 import com.maddyhome.idea.vim.option.Options;
-import com.maddyhome.idea.vim.undo.UndoManager;
 
 import javax.swing.*;
 import java.awt.event.KeyEvent;
@@ -87,8 +86,7 @@ public class ChangeGroup extends AbstractActionGroup {
             return;
           }
 
-          if (CommandState.getInstance(editor).getMode() == CommandState.MODE_INSERT ||
-              CommandState.getInstance(editor).getMode() == CommandState.MODE_REPLACE) {
+          if (CommandState.inInsertMode(editor)) {
             clearStrokes(editor);
           }
         }
@@ -440,6 +438,9 @@ public class ChangeGroup extends AbstractActionGroup {
    * @param count   The number of times to repeat the previous insert
    */
   private void repeatInsertText(Editor editor, DataContext context, int count) {
+    if (lastStrokes == null) {
+      return;
+    }
     for (int i = 0; i < count; i++) {
       // Treat other keys special by performing the appropriate action they represent in insert/replace mode
       for (Object lastStroke : lastStrokes) {
@@ -488,9 +489,6 @@ public class ChangeGroup extends AbstractActionGroup {
     if (!CommandState.inInsertMode(editor)) {
       resetCursor(editor, false);
     }
-
-    UndoManager.getInstance().endCommand(editor);
-    UndoManager.getInstance().beginCommand(editor);
   }
 
   /**
@@ -1268,8 +1266,7 @@ public class ChangeGroup extends AbstractActionGroup {
 
   public void indentLines(Editor editor, DataContext context, int lines, int dir) {
     int cnt = 1;
-    if (CommandState.getInstance(editor).getMode() == CommandState.MODE_INSERT ||
-        CommandState.getInstance(editor).getMode() == CommandState.MODE_REPLACE) {
+    if (CommandState.inInsertMode(editor)) {
       if (strokes.size() > 0) {
         Object stroke = strokes.get(strokes.size() - 1);
         if (stroke instanceof Character) {
@@ -1405,8 +1402,7 @@ public class ChangeGroup extends AbstractActionGroup {
       }
     }
 
-    if (CommandState.getInstance(editor).getMode() != CommandState.MODE_INSERT &&
-        CommandState.getInstance(editor).getMode() != CommandState.MODE_REPLACE) {
+    if (!CommandState.inInsertMode(editor)) {
       if (!range.isMultiple()) {
         MotionGroup.moveCaret(editor, context,
                               CommandGroups.getInstance().getMotion().moveCaretToLineStartSkipLeading(editor, sline));
@@ -1597,47 +1593,6 @@ public class ChangeGroup extends AbstractActionGroup {
       }
 
       return true;
-    }
-  }
-
-  /**
-   * This class listens for editor tab changes so any insert/replace modes that need to be reset can be
-   */
-  public static class InsertCheck extends FileEditorManagerAdapter {
-    /**
-     * Ensure that all open editors get a block cursor for command mode.
-     *
-     * @param fileEditorManager
-     * @param virtualFile
-     */
-    public void fileOpened(FileEditorManager fileEditorManager, VirtualFile virtualFile) {
-      if (!VimPlugin.isEnabled()) return;
-
-      resetCursor(virtualFile, EditorData.getProject(fileEditorManager), false);
-    }
-
-    /**
-     * The user has changed the editor they are working with - exit insert/replace mode, and complete any
-     * appropriate repeat.
-     *
-     * @param event
-     */
-    public void selectionChanged(FileEditorManagerEvent event) {
-      if (!VimPlugin.isEnabled()) return;
-
-      logger.debug("selected file changed");
-
-      FileEditor fe = event.getOldEditor();
-      if (fe instanceof TextEditor) {
-        Editor editor = ((TextEditor)event.getOldEditor()).getEditor();
-        CommandState.getInstance(editor).reset();
-        KeyHandler.getInstance().fullReset(editor);
-      }
-
-      VirtualFile virtualFile = event.getOldFile();
-      if (virtualFile != null) {
-        resetCursor(virtualFile, EditorData.getProject(event.getManager()), false);
-      }
     }
   }
 

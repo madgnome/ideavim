@@ -19,7 +19,7 @@ package com.maddyhome.idea.vim.group;
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-import com.intellij.openapi.actionSystem.DataContext;
+import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.*;
@@ -991,9 +991,7 @@ public class MotionGroup extends AbstractActionGroup {
       col = newcol;
     }
 
-    newcol = EditorHelper.normalizeVisualColumn(editor, newline, newcol,
-                                                CommandState.getInstance(editor).getMode() == CommandState.MODE_INSERT ||
-                                                CommandState.getInstance(editor).getMode() == CommandState.MODE_REPLACE);
+    newcol = EditorHelper.normalizeVisualColumn(editor, newline, newcol, CommandState.inInsertMode(editor));
 
     if (newline != cline || newcol != ocol) {
       int offset = EditorHelper.visualPostionToOffset(editor, new VisualPosition(newline, newcol));
@@ -1214,11 +1212,7 @@ public class MotionGroup extends AbstractActionGroup {
     else {
       int col = EditorData.getLastColumn(editor);
       int line = EditorHelper.normalizeVisualLine(editor, pos.line + count);
-      VisualPosition newPos = new VisualPosition(line, EditorHelper.normalizeVisualColumn(editor, line, col,
-                                                                                          CommandState.getInstance(editor).getMode() ==
-                                                                                          CommandState.MODE_INSERT ||
-                                                                                          CommandState.getInstance(editor).getMode() ==
-                                                                                          CommandState.MODE_REPLACE));
+      VisualPosition newPos = new VisualPosition(line, EditorHelper.normalizeVisualColumn(editor, line, col, CommandState.inInsertMode(editor)));
 
       return EditorHelper.visualPostionToOffset(editor, newPos);
     }
@@ -1276,6 +1270,31 @@ public class MotionGroup extends AbstractActionGroup {
       }
     }
   }
+
+  public int moveCaretGotoPreviousTab(final DataContext context) {
+    final AnAction previousTab = ActionManager.getInstance().getAction("PreviousTab");
+    previousTab.actionPerformed(new AnActionEvent(
+      null,
+      context,
+      "",
+      new Presentation(),
+      ActionManager.getInstance(),
+      0));
+    return 0;
+  }
+
+  public int moveCaretGotoNextTab(final DataContext context) {
+    final AnAction previousTab = ActionManager.getInstance().getAction("NextTab");
+    previousTab.actionPerformed(new AnActionEvent(
+      null,
+      context,
+      "",
+      new Presentation(),
+      ActionManager.getInstance(),
+      0));
+    return 0;
+  }
+
 
   public static void scrollCaretIntoView(Editor editor) {
     int cline = EditorHelper.getCurrentVisualLine(editor);
@@ -1794,8 +1813,7 @@ public class MotionGroup extends AbstractActionGroup {
       if (ignore) return;
 
       Editor editor = visibleAreaEvent.getEditor();
-      if (CommandState.getInstance(editor).getMode() == CommandState.MODE_INSERT ||
-          CommandState.getInstance(editor).getMode() == CommandState.MODE_REPLACE) {
+      if (CommandState.inInsertMode(editor)) {
         return;
       }
 
@@ -1803,16 +1821,7 @@ public class MotionGroup extends AbstractActionGroup {
         logger.debug("old=" + visibleAreaEvent.getOldRectangle());
         logger.debug("new=" + visibleAreaEvent.getNewRectangle());
       }
-      /*
-      if (visibleAreaEvent.getNewRectangle().y == visibleAreaEvent.getOldRectangle().y)
-      {
-          MotionGroup.scrollCaretIntoView(editor);
-      }
-      else
-      {
-          MotionGroup.moveCaretToView(editor, null);
-      }
-      */
+
       if (!visibleAreaEvent.getNewRectangle().equals(visibleAreaEvent.getOldRectangle())) {
         if (!EditorData.isConsoleOutput(editor) && !isTabSwitchEvent(visibleAreaEvent)) {
           MotionGroup.moveCaretToView(editor, null);
@@ -1820,12 +1829,9 @@ public class MotionGroup extends AbstractActionGroup {
       }
     }
 
-    private boolean isTabSwitchEvent(VisibleAreaEvent visibleAreaEvent) {
-      Rectangle newRectangle = visibleAreaEvent.getNewRectangle();
-      Rectangle oldRectangle = visibleAreaEvent.getOldRectangle();
-
-      return (newRectangle.width == 0 && newRectangle.height == 0) ||
-              (oldRectangle.width == 0 && oldRectangle.height == 0);
+    private static boolean isTabSwitchEvent(final VisibleAreaEvent visibleAreaEvent) {
+      final Rectangle newRectangle = visibleAreaEvent.getNewRectangle();
+      return newRectangle.width == 0 || newRectangle.height == 0;
     }
 
     private static boolean ignore = false;
